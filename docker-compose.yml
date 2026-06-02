@@ -1,0 +1,107 @@
+version: '3.8'
+
+services:
+  # Next.js Application (Frontend)
+  nextjs-app:
+    build: 
+      context: ./HandyHouse
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgrespassword@postgres:5432/erp_crm_db
+      - NEXT_PUBLIC_API_URL=http://api-gateway:80/api
+    restart: always
+    depends_on:
+      - api-gateway
+      - postgres
+
+  # API Gateway (Nginx)
+  api-gateway:
+    image: nginx:alpine
+    container_name: erp_api_gateway
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx-gateway/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - crm-service
+      - hr-service
+
+  # CRM Microservice
+  crm-service:
+    build:
+      context: ./crm-service
+    container_name: crm_service
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgrespassword@postgres:5432/erp_crm_db
+      - PORT=5001
+    restart: always
+    depends_on:
+      - postgres
+
+  # HR Microservice
+  hr-service:
+    build:
+      context: ./hr-service
+    container_name: hr_service
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgrespassword@postgres:5432/erp_hr_db
+      - PORT=5002
+    restart: always
+    depends_on:
+      - postgres
+
+  # PostgreSQL Central Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: erp_postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgrespassword
+      - POSTGRES_MULTIPLE_DATABASES=erp_crm_db,erp_hr_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres-init:/docker-entrypoint-initdb.d
+    restart: always
+
+  # MinIO Object Storage
+  minio:
+    image: minio/minio:latest
+    container_name: erp_minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ACCESS_KEY:-admin}
+      - MINIO_ROOT_PASSWORD=${MINIO_SECRET_KEY:-adminpassword}
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    restart: always
+
+  # MinIO Client to Initialize Buckets
+  minio-mc:
+    image: minio/mc:latest
+    container_name: erp_minio_mc
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      sleep 5;
+      /usr/bin/mc alias set myminio http://minio:9000 $${MINIO_ACCESS_KEY:-admin} $${MINIO_SECRET_KEY:-adminpassword};
+      /usr/bin/mc mb myminio/crm-assets || true;
+      /usr/bin/mc anonymous set public myminio/crm-assets;
+      /usr/bin/mc mb myminio/hr-assets || true;
+      /usr/bin/mc anonymous set public myminio/hr-assets;
+      exit 0;
+      "
+
+volumes:
+  postgres_data:
+  minio_data:

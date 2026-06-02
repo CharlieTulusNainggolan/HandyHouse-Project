@@ -1,0 +1,8 @@
+{
+  "name": "handyhouse-hr",
+  "version": "1.0.0",
+  "description": "HR Dashboard - Standalone server port 3002",
+  "scripts": {
+    "dev": "node server.js"
+  }
+}

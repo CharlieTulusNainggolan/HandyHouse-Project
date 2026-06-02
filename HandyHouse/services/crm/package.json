@@ -1,0 +1,8 @@
+{
+  "name": "handyhouse-crm",
+  "version": "1.0.0",
+  "description": "CRM Dashboard - Standalone server port 3001",
+  "scripts": {
+    "dev": "node server.js"
+  }
+}
