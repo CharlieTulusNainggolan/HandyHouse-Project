@@ -9,23 +9,48 @@ services:
       - "3000:3000"
     environment:
       - DATABASE_URL=postgresql://postgres:postgrespassword@postgres:5432/erp_crm_db
-      - NEXT_PUBLIC_API_URL=http://api-gateway:80/api
+      - NEXT_PUBLIC_API_URL=http://localhost/api
+      - MINIO_ENDPOINT=minio
+      - MINIO_PORT=9000
+      - MINIO_PUBLIC_URL=http://s3.localhost
+      - CRM_SERVICE_URL=http://crm-service:5001
+      - HR_SERVICE_URL=http://hr-service:5002
     restart: always
     depends_on:
-      - api-gateway
       - postgres
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.nextjs-app.rule=Host(`localhost`) || Host(`handyhouse.localhost`) || Host(`crm.localhost`) || Host(`hr.localhost`)"
+      - "traefik.http.routers.nextjs-app.entrypoints=web"
+      - "traefik.http.services.nextjs-app.loadbalancer.server.port=3000"
 
-  # API Gateway (Nginx)
-  api-gateway:
-    image: nginx:alpine
-    container_name: erp_api_gateway
+  # API Gateway (Nginx) - Commented out as requested, replaced by Traefik
+  # api-gateway:
+  #   image: nginx:alpine
+  #   container_name: erp_api_gateway
+  #   ports:
+  #     - "8080:80"
+  #   volumes:
+  #     - ./nginx-gateway/nginx.conf:/etc/nginx/nginx.conf:ro
+  #   depends_on:
+  #     - crm-service
+  #     - hr-service
+
+  # Traefik Reverse Proxy
+  traefik:
+    image: traefik:v3.0
+    container_name: erp_traefik
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
     ports:
-      - "8080:80"
+      - "80:80"
+      - "8080:8080" # Traefik Dashboard
     volumes:
-      - ./nginx-gateway/nginx.conf:/etc/nginx/nginx.conf:ro
-    depends_on:
-      - crm-service
-      - hr-service
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    restart: always
 
   # CRM Microservice
   crm-service:
@@ -37,9 +62,17 @@ services:
     environment:
       - DATABASE_URL=postgresql://postgres:postgrespassword@postgres:5432/erp_crm_db
       - PORT=5001
+      - MINIO_ENDPOINT=minio
+      - MINIO_PORT=9000
+      - MINIO_PUBLIC_URL=http://s3.localhost
     restart: always
     depends_on:
       - postgres
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.crm-service.rule=PathPrefix(`/api/crm`)"
+      - "traefik.http.routers.crm-service.entrypoints=web"
+      - "traefik.http.services.crm-service.loadbalancer.server.port=5001"
 
   # HR Microservice
   hr-service:
@@ -51,9 +84,17 @@ services:
     environment:
       - DATABASE_URL=postgresql://postgres:postgrespassword@postgres:5432/erp_hr_db
       - PORT=5002
+      - MINIO_ENDPOINT=minio
+      - MINIO_PORT=9000
+      - MINIO_PUBLIC_URL=http://s3.localhost
     restart: always
     depends_on:
       - postgres
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.hr-service.rule=PathPrefix(`/api/hr`)"
+      - "traefik.http.routers.hr-service.entrypoints=web"
+      - "traefik.http.services.hr-service.loadbalancer.server.port=5002"
 
   # PostgreSQL Central Database
   postgres:
@@ -84,6 +125,18 @@ services:
       - minio_data:/data
     command: server /data --console-address ":9001"
     restart: always
+    labels:
+      - "traefik.enable=true"
+      # Console dashboard routing
+      - "traefik.http.routers.minio-console.rule=Host(`minio.localhost`)"
+      - "traefik.http.routers.minio-console.entrypoints=web"
+      - "traefik.http.routers.minio-console.service=minio-console-service"
+      - "traefik.http.services.minio-console-service.loadbalancer.server.port=9001"
+      # API routing (for public file access)
+      - "traefik.http.routers.minio-api.rule=Host(`s3.localhost`)"
+      - "traefik.http.routers.minio-api.entrypoints=web"
+      - "traefik.http.routers.minio-api.service=minio-api-service"
+      - "traefik.http.services.minio-api-service.loadbalancer.server.port=9000"
 
   # MinIO Client to Initialize Buckets
   minio-mc:
@@ -99,6 +152,8 @@ services:
       /usr/bin/mc anonymous set public myminio/crm-assets;
       /usr/bin/mc mb myminio/hr-assets || true;
       /usr/bin/mc anonymous set public myminio/hr-assets;
+      /usr/bin/mc mb myminio/erp-bucket || true;
+      /usr/bin/mc anonymous set public myminio/erp-bucket;
       exit 0;
       "
 

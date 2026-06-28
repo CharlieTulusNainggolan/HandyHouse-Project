@@ -2,7 +2,14 @@ import Navbar from "@/components/Navbar";
 import LoginForm from "./LoginForm";
 import Link from "next/link";
 
-export default function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }> | { error?: string };
+}) {
+  const resolvedParams = await searchParams;
+  const error = resolvedParams?.error;
+
   return (
     <main className="min-h-screen bg-slate-100 text-slate-900 font-sans selection:bg-orange-200">
        <Navbar />
@@ -50,7 +57,7 @@ export default function LoginPage() {
                     
                     <div className="w-full max-w-sm mx-auto">
                         <h2 className="text-3xl font-extrabold text-[#8c3e1e] mb-8 tracking-tight text-center">Log in to your account</h2>
-                        <LoginForm />
+                        <LoginForm errorParam={error} />
                     </div>
                  </div>
 

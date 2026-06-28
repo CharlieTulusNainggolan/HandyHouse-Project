@@ -26,7 +26,7 @@ export default function CRMDashboard() {
     formData.append('name', 'Customer Document');
 
     try {
-      const response = await fetch('http://localhost:8080/api/crm/upload', {
+      const response = await fetch('/api/crm/upload', {
         method: 'POST',
         body: formData,
       });

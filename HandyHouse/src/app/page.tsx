@@ -10,13 +10,13 @@ export default async function Home() {
   const headersList = await headers();
   const host = headersList.get('host') || '';
   
-  // Jika diakses dari port 3001, langsung tampilkan CRM
-  if (host.includes('3001')) {
+  // Jika diakses dari port 3001 atau crm.localhost, langsung tampilkan CRM
+  if (host.includes('3001') || host.includes('crm.localhost')) {
     return <CRMDashboard />;
   }
   
-  // Jika diakses dari port 3002, langsung tampilkan HR
-  if (host.includes('3002')) {
+  // Jika diakses dari port 3002 atau hr.localhost, langsung tampilkan HR
+  if (host.includes('3002') || host.includes('hr.localhost')) {
     return <HRDashboard />;
   }
   return (

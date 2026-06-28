@@ -56,7 +56,8 @@ app.post('/api/hr/upload', upload.single('file'), async (req, res) => {
       ContentType: req.file.mimetype,
     }));
 
-    const url = `http://localhost:9000/${bucketName}/${objectName}`;
+    const publicUrl = process.env.MINIO_PUBLIC_URL || 'http://s3.localhost';
+    const url = `${publicUrl}/${bucketName}/${objectName}`;
     
     // Save to Postgres Database
     await pool.query('INSERT INTO hr_documents (filename, url) VALUES ($1, $2)', [req.file.originalname, url]);

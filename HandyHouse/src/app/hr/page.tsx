@@ -27,7 +27,7 @@ export default function HRDashboard() {
     formData.append('position', 'Staff');
 
     try {
-      const response = await fetch('http://localhost:8080/api/hr/upload', {
+      const response = await fetch('/api/hr/upload', {
         method: 'POST',
         body: formData,
       });
