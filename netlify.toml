@@ -2,3 +2,7 @@
   base = "HandyHouse"
   publish = ".next"
   command = "npx prisma generate && npm run build"
+
+[build.environment]
+  NPM_FLAGS = "--legacy-peer-deps"
+
