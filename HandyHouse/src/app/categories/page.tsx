@@ -2,6 +2,8 @@ import Navbar from "@/components/Navbar";
 import Link from "next/link";
 import prisma from "@/lib/prisma";
 
+export const dynamic = 'force-dynamic';
+
 export default async function CategoriesPage() {
   const categories = ['POWER_TOOLS', 'HAND_TOOLS', 'KITCHENWARE', 'GARDENING', 'HARDWARE'];
   

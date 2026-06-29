@@ -3,6 +3,8 @@ import BackButton from "@/components/BackButton";
 import prisma from "@/lib/prisma";
 import SCMClient from "./SCMClient";
 
+export const dynamic = 'force-dynamic';
+
 export default async function SCManagementPage() {
   const products = await prisma.product.findMany({
     orderBy: { createdAt: 'desc' },
